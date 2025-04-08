@@ -36,8 +36,8 @@
 import { ref, computed } from 'vue';
 
 // Define reactive variables for each slider (0-1 range)
-const locationWeight = ref(0.5);
-const sizeWeight = ref(0.5);
+const locationWeight = ref(1);
+const sizeWeight = ref(1);
 
 // Create balanced array of locations
 const locations = ['NA', 'LATAM', 'EMEA', 'APAC', 'NA', 'LATAM', 'EMEA', 'APAC', 'NA', 'LATAM'];
@@ -58,8 +58,8 @@ const getLocationScore = (location) => {
 
 // Calculate score based on location and size
 const calculateScore = (account) => {
-  const locationScore = getLocationScore(account.location);
-  const sizeScore = account.size / 200;
+  const locationScore = getLocationScore(account.location) * locationWeight.value;
+  const sizeScore = (account.size / 200) * sizeWeight.value;
   return parseFloat((locationScore + sizeScore).toFixed(1));
 };
 
@@ -137,7 +137,7 @@ const sortedRankings = computed(() => {
 .slider-with-value {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 20px;
 }
 
 .value-display {
@@ -160,3 +160,4 @@ const sortedRankings = computed(() => {
   font-weight: 800;
 }
 </style>
+
