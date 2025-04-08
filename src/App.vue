@@ -4,59 +4,92 @@
       <div class="column first-column">
         <h2>Scoring Weights</h2>
         <div class="slider-container">
-          <label for="geography">Geography</label>
+          <label for="location">Location</label>
           <div class="slider-with-value">
-            <Slider v-model="geographyWeight" :min="0" :max="1" :step="0.01" class="w-full" />
-            <InputText v-model="geographyWeight" :readonly="true" class="value-display" />
+            <Slider v-model="locationWeight" :min="0" :max="1" :step="0.1" class="w-full" />
+            <InputText v-model="locationWeight" :readonly="true" class="value-display" />
           </div>
         </div>
         <div class="slider-container">
           <label for="size">Size</label>
           <div class="slider-with-value">
-            <Slider v-model="sizeWeight" :min="0" :max="1" :step="0.01" class="w-full" />
+            <Slider v-model="sizeWeight" :min="0" :max="1" :step="0.1" class="w-full" />
             <InputText v-model="sizeWeight" :readonly="true" class="value-display" />
-          </div>
-        </div>
-        <div class="slider-container">
-          <label for="product">Product</label>
-          <div class="slider-with-value">
-            <Slider v-model="productWeight" :min="0" :max="1" :step="0.01" class="w-full" />
-            <InputText v-model="productWeight" :readonly="true" class="value-display" />
-          </div>
-        </div>
-        <div class="slider-container">
-          <label for="adjacency">Adjacency</label>
-          <div class="slider-with-value">
-            <Slider v-model="adjacencyWeight" :min="0" :max="1" :step="0.01" class="w-full" />
-            <InputText v-model="adjacencyWeight" :readonly="true" class="value-display" />
-          </div>
-        </div>
-        <div class="slider-container">
-          <label for="techStack">Tech Stack</label>
-          <div class="slider-with-value">
-            <Slider v-model="techStackWeight" :min="0" :max="1" :step="0.01" class="w-full" />
-            <InputText v-model="techStackWeight" :readonly="true" class="value-display" />
           </div>
         </div>
       </div>
       <div class="column second-column">
-        <!-- Second column content -->
-        <h2>Second Column (800px)</h2>
-        <p>This is the second column with 800px width.</p>
+        <h2>Account List</h2>
+        <DataTable :value="sortedRankings" stripedRows>
+          <Column field="rank" header="Rank" style="width: 80px;"></Column>
+          <Column field="name" header="Name"></Column>
+          <Column field="location" header="Location"></Column>
+          <Column field="size" header="Size"></Column>
+          <Column field="score" header="Score"></Column>
+        </DataTable>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 // Define reactive variables for each slider (0-1 range)
-const geographyWeight = ref(0.5);
+const locationWeight = ref(0.5);
 const sizeWeight = ref(0.5);
-const productWeight = ref(0.5);
-const adjacencyWeight = ref(0.5);
-const techStackWeight = ref(0.5);
+
+// Create balanced array of locations
+const locations = ['NA', 'LATAM', 'EMEA', 'APAC', 'NA', 'LATAM', 'EMEA', 'APAC', 'NA', 'LATAM'];
+
+// Modified to get a random size between 1 and 1000
+const getRandomSize = () => Math.floor(Math.random() * 1000) + 1;
+
+// Location score mapping
+const getLocationScore = (location) => {
+  switch(location) {
+    case 'NA': return 5;
+    case 'EMEA': return 4;
+    case 'LATAM': return 3;
+    case 'APAC': return 2;
+    default: return 0;
+  }
+};
+
+// Calculate score based on location and size
+const calculateScore = (account) => {
+  const locationScore = getLocationScore(account.location);
+  const sizeScore = account.size / 200;
+  return parseFloat((locationScore + sizeScore).toFixed(1));
+};
+
+// Base data for the rankings table with imaginary company names
+const accountData = ref([
+  { name: 'NexusWave', location: locations[0], size: getRandomSize() },
+  { name: 'QuantumShift', location: locations[1], size: getRandomSize() },
+  { name: 'EchoSphere', location: locations[2], size: getRandomSize() },
+  { name: 'VortexTech', location: locations[3], size: getRandomSize() },
+  { name: 'AlphaFusion', location: locations[4], size: getRandomSize() },
+  { name: 'StellarSync', location: locations[5], size: getRandomSize() },
+  { name: 'PulseMatrix', location: locations[6], size: getRandomSize() },
+  { name: 'ZenithCore', location: locations[7], size: getRandomSize() },
+  { name: 'CrestDigital', location: locations[8], size: getRandomSize() },
+  { name: 'NovaLink', location: locations[9], size: getRandomSize() },
+]);
+
+// Computed property to calculate scores, sort, and assign ranks
+const sortedRankings = computed(() => {
+  return accountData.value
+    .map(account => ({
+      ...account,
+      score: calculateScore(account)
+    }))
+    .sort((a, b) => b.score - a.score)  // Sort by score descending
+    .map((account, index) => ({
+      ...account,
+      rank: index + 1
+    }));
+});
 </script>
 
 <style scoped>
@@ -79,7 +112,7 @@ const techStackWeight = ref(0.5);
 }
 
 .first-column {
-  width: 400px;
+  width: 320px;
   flex-shrink: 0;
 }
 
@@ -94,7 +127,6 @@ const techStackWeight = ref(0.5);
 
 .slider-container label {
   display: block;
-  margin-bottom: 0.5rem;
   font-weight: 500;
 }
 
@@ -111,5 +143,20 @@ const techStackWeight = ref(0.5);
 .value-display {
   width: 60px;
   text-align: center;
+}
+
+.caret-icon {
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+
+.caret-icon.up {
+  color: green;
+  font-weight: 800;
+}
+
+.caret-icon.down {
+  color: red;
+  font-weight: 800;
 }
 </style>
