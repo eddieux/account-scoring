@@ -6,27 +6,32 @@
         <div class="slider-container">
           <label for="location">Location</label>
           <div class="slider-with-value">
-            <Slider v-model="locationWeight" :min="0" :max="1" :step="0.1" class="w-full" />
+            <Slider v-model="locationWeight" :min="0" :max="1" :step="0.1" class="w-full" @change="trackChanges" />
             <InputText v-model="locationWeight" :readonly="true" class="value-display" />
           </div>
         </div>
         <div class="slider-container">
           <label for="size">Size</label>
           <div class="slider-with-value">
-            <Slider v-model="sizeWeight" :min="0" :max="1" :step="0.1" class="w-full" />
+            <Slider v-model="sizeWeight" :min="0" :max="1" :step="0.1" class="w-full" @change="trackChanges" />
             <InputText v-model="sizeWeight" :readonly="true" class="value-display" />
           </div>
+        </div>
+        <div class="apply-button-container">
+          <Button label="Apply" :disabled="!hasChanges" @click="applyWeights" />
         </div>
       </div>
       <div class="column second-column">
         <h2>Account List</h2>
-        <DataTable :value="sortedRankings" stripedRows>
-          <Column field="rank" header="Rank" style="width: 80px;"></Column>
-          <Column field="name" header="Name"></Column>
-          <Column field="location" header="Location"></Column>
-          <Column field="size" header="Size"></Column>
-          <Column field="score" header="Score"></Column>
-        </DataTable>
+        <Transition>
+          <DataTable v-show="tableVisible" :value="sortedRankings" stripedRows>
+            <Column field="rank" header="Rank" style="width: 80px;"></Column>
+            <Column field="name" header="Name"></Column>
+            <Column field="location" header="Location"></Column>
+            <Column field="size" header="Size"></Column>
+            <Column field="score" header="Score"></Column>
+          </DataTable>
+        </Transition>
       </div>
     </div>
   </div>
@@ -38,6 +43,45 @@ import { ref, computed } from 'vue';
 // Define reactive variables for each slider (0-1 range)
 const locationWeight = ref(1);
 const sizeWeight = ref(1);
+
+// Define separate variables for applied weights (used in calculations)
+const appliedLocationWeight = ref(1);
+const appliedSizeWeight = ref(1);
+
+// Track if user has made changes to the sliders
+const hasChanges = ref(false);
+
+// Table visibility state for animation
+const tableVisible = ref(true);
+
+// Track changes to enable the Apply button
+const trackChanges = () => {
+  if (locationWeight.value !== appliedLocationWeight.value ||
+      sizeWeight.value !== appliedSizeWeight.value) {
+    hasChanges.value = true;
+  } else {
+    hasChanges.value = false;
+  }
+};
+
+// Function to apply the weights with animation
+const applyWeights = () => {
+  // First hide the table with fade out effect
+  tableVisible.value = false;
+
+  // Wait for the transition to complete before updating weights
+  setTimeout(() => {
+    // Apply the new weights
+    appliedLocationWeight.value = parseFloat(locationWeight.value);
+    appliedSizeWeight.value = parseFloat(sizeWeight.value);
+    hasChanges.value = false; // Reset changes flag after applying
+
+    // Show the table again with fade in effect
+    setTimeout(() => {
+      tableVisible.value = true;
+    }, 100);
+  }, 300); // Match this with the CSS transition duration
+};
 
 // Create balanced array of locations
 const locations = ['NA', 'LATAM', 'EMEA', 'APAC', 'NA', 'LATAM', 'EMEA', 'APAC', 'NA', 'LATAM'];
@@ -58,8 +102,8 @@ const getLocationScore = (location) => {
 
 // Calculate score based on location and size
 const calculateScore = (account) => {
-  const locationScore = getLocationScore(account.location) * locationWeight.value;
-  const sizeScore = (account.size / 200) * sizeWeight.value;
+  const locationScore = getLocationScore(account.location) * appliedLocationWeight.value;
+  const sizeScore = (account.size / 200) * appliedSizeWeight.value;
   return parseFloat((locationScore + sizeScore).toFixed(1));
 };
 
@@ -103,6 +147,7 @@ const sortedRankings = computed(() => {
   display: flex;
   gap: 20px;
   width: 100%;
+  height: 680px;
 }
 
 .column {
@@ -159,5 +204,21 @@ const sortedRankings = computed(() => {
   color: red;
   font-weight: 800;
 }
-</style>
 
+.apply-button-container {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Add transition styles for the table */
+.v-enter-active,
+.v-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
+}
+</style>
