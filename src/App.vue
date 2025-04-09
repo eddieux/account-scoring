@@ -22,10 +22,28 @@
         </div>
       </div>
       <div class="column second-column">
-        <h2>Account List</h2>
+        <div class="header-with-action">
+          <h2>Account List</h2>
+          <Button icon="pi pi-refresh" @click="reloadData" />
+        </div>
         <Transition>
           <DataTable v-show="tableVisible" :value="sortedRankings" stripedRows>
             <Column field="rank" header="Rank" style="width: 80px;"></Column>
+            <Column field="movement" header="Change" style="width: 80px;">
+              <template #body="slotProps">
+                <span v-if="slotProps.data.movement === 'up'" class="movement-icon up">
+                  <i class="pi pi-sort-up"></i>
+                  <span class="rank-change">+{{ slotProps.data.rankChange }}</span>
+                </span>
+                <span v-else-if="slotProps.data.movement === 'down'" class="movement-icon down">
+                  <i class="pi pi-sort-down"></i>
+                  <span class="rank-change">-{{ slotProps.data.rankChange }}</span>
+                </span>
+                <span v-else class="movement-icon same">
+                  <i class="pi pi-minus"></i>
+                </span>
+              </template>
+            </Column>
             <Column field="name" header="Name"></Column>
             <Column field="location" header="Location"></Column>
             <Column field="size" header="Size"></Column>
@@ -54,6 +72,9 @@ const hasChanges = ref(false);
 // Table visibility state for animation
 const tableVisible = ref(true);
 
+// Store previous rankings to determine movement
+const previousRankings = ref({});
+
 // Track changes to enable the Apply button
 const trackChanges = () => {
   if (locationWeight.value !== appliedLocationWeight.value ||
@@ -69,6 +90,13 @@ const applyWeights = () => {
   // First hide the table with fade out effect
   tableVisible.value = false;
 
+  // Store current rankings before applying new weights
+  const currentRankings = {};
+  sortedRankings.value.forEach(account => {
+    currentRankings[account.name] = account.rank;
+  });
+  previousRankings.value = currentRankings;
+
   // Wait for the transition to complete before updating weights
   setTimeout(() => {
     // Apply the new weights
@@ -81,6 +109,11 @@ const applyWeights = () => {
       tableVisible.value = true;
     }, 100);
   }, 300); // Match this with the CSS transition duration
+};
+
+// Function to reload the page
+const reloadData = () => {
+  window.location.reload();
 };
 
 // Create balanced array of locations
@@ -121,18 +154,40 @@ const accountData = ref([
   { name: 'NovaLink', location: locations[9], size: getRandomSize() },
 ]);
 
-// Computed property to calculate scores, sort, and assign ranks
+// Computed property to calculate scores, sort, assign ranks, and determine movement
 const sortedRankings = computed(() => {
-  return accountData.value
+  const rankings = accountData.value
     .map(account => ({
       ...account,
       score: calculateScore(account)
     }))
     .sort((a, b) => b.score - a.score)  // Sort by score descending
-    .map((account, index) => ({
-      ...account,
-      rank: index + 1
-    }));
+    .map((account, index) => {
+      const currentRank = index + 1;
+      const previousRank = previousRankings.value[account.name];
+
+      // Determine movement (up, down, or same) and calculate rank change
+      let movement = 'same';
+      let rankChange = 0;
+
+      if (previousRank !== undefined) {
+        rankChange = previousRank - currentRank;
+        if (rankChange > 0) {
+          movement = 'up';
+        } else if (rankChange < 0) {
+          movement = 'down';
+        }
+      }
+
+      return {
+        ...account,
+        rank: currentRank,
+        movement: movement,
+        rankChange: Math.abs(rankChange)
+      };
+    });
+
+  return rankings;
 });
 </script>
 
@@ -220,5 +275,43 @@ const sortedRankings = computed(() => {
 .v-enter-from,
 .v-leave-to {
   opacity: 0;
+}
+
+/* Movement column icon styles */
+.movement-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.movement-icon.up {
+  color: #22c55e;
+  font-size: 1rem;
+}
+
+.movement-icon.down {
+  color: #ef4444;
+  font-size: 1rem;
+}
+
+.movement-icon.same {
+  color: #9ca3af;
+  font-size: 1rem;
+}
+
+.rank-change {
+  margin-left: 3px;
+  font-weight: 600;
+}
+
+.header-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.header-with-action h2 {
+  margin: 0;
 }
 </style>
